@@ -15,11 +15,11 @@ Since we have implemented a timer for ``sendfile``, it would be better to run ``
 
 In ``packheader.h``, we implemented a function to calculate 32-bit Cyclic Redundancy Check (CRC) value by table look-up. We also defined a struct to store the header of each packet, called ``PackHeader``, which includes ``crc32_val``: CRC value of packet, ``serial_id``: the serial number of packet, ``packet_size``: the size of packet.
 
-Our packet size is 8024. The first 12 bytes of each packet is its header, the following 8000 bytes are the content of message.
+Our packet size is 10024. The first 12 bytes of each packet is its header, the following 10000 bytes are the content of message.
 
 ## Protocols and Algorithms
 
-We used sliding window algorithm in our project. The window size is fixed to be 125. 
+We used sliding window algorithm in our project. The window size is fixed to be 100. 
 
 ### Sender
 
@@ -32,6 +32,32 @@ If the resend pool is not empty, sender would resend the packet with the smalles
 #### Timeout Detection
 
 When a packet is inserted into cache, it is attached with a time stamp. Timeout detection is performed in every loop: for every packet in cache, calculate the time elapsed using attached time stamp; if a packet is timeout, insert its serial number into resend pool.
+
+#### CRC
+
+We choose to use crc-32 algorithm in which the $C(x)$ is defined as follows:
+
+$C(x)=x^{32}+x^{26}+x^{23}+x^{22}+x^{16}+x^{12}+x^{11}+x^{10}+x^{8}+x^{7}+x^{5}+x^{4}+x^{2}+x^{1}+x^{0}$
+
+The implementation of our crc-32 algorithm uses a pre-calculated table, `crc32_table` to get the remainder of any given one-byte number (or we can say 5-byte if the added 32 0's are counted).
+
+For example, given a one-byte number $1$, then the dividend is `0x100000000` (32 `0`'s added), and the divisor, as mentioned above $C(x)$, is `0x104c11db7`. We can do the modulo-2 division ourselves and get the remainder as `0x04c11db7`; on the other hand, in our code, you can see the value of `crc32_table[1]` is exactly `0x04c11db7`. 
+
+With the help of this table, now we can see why we have the following formula to calculate the crc.
+
+```
+crc = (crc << 8) ^ crc32_table[((crc >> 24) ^ *buf++) & 255];
+```
+
+The variable `crc` represents current remainder value after considering all the bytes before `buf`. 
+
+`crc >> 24` extracts the most significant byte of the current remainder value.
+
+`(crc >> 24) ^ *buf` adds the current byte to the most significant byte and gets the current dividend value.
+
+`crc32_table[(crc >> 24) ^ *buf]` helps us calculate the new remainder.
+
+Because `crc >> 24` means we discards the less significant 24 bits of previous remainder, we need to add these 24 bits back to the new remainder. Also, we need to adjust the bit position of these 24 bits by shifting left 8 bits, because the calculation moves forward one byte per iteration.
 
 #### Pseudocode
 
@@ -87,7 +113,7 @@ We first measure Round-Trip-Time (RTT) by ``ping water.clear.rice.edu`` on ``cai
 
 #### Window Size Selection
 
-The window size should be large enough to fully utilize the available bandwidth, but it should be kept within the capacity of sender, receiver, and network. Therefore, we set the window size to be 125.
+The window size should be large enough to fully utilize the available bandwidth, but it should be kept within the capacity of sender, receiver, and network. Therefore, we set the window size to be 100.
 
 ## New Features
 
@@ -101,7 +127,7 @@ This trick makes our program run faster, especially at time when the network is 
 
 ### Sender
 
-Our packet size is fixed to be 8024 bytes, and our window size is fixed to be 125. Every cached packet is attached with a time stamp of 16 bytes. In the worst case, every packet inside the window is cached, and the serial number of every packet (4 bytes) is in resend pool. In this case, the required memory is approximately 1.006 MB.
+Our packet size is fixed to be 10024 bytes, and our window size is fixed to be 100. Every cached packet is attached with a time stamp of 16 bytes. In the worst case, every packet inside the window is cached, and the serial number of every packet (4 bytes) is in resend pool. In this case, the required memory is approximately 1.004 MB.
 
 ### Receiver
 
