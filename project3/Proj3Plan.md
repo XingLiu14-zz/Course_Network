@@ -9,8 +9,6 @@
 
 
 
-
-
 - LS/DV periodic (30 second) 
   - initiate **LS/DV flood**
 - recv LS/DV update
@@ -21,8 +19,6 @@
 
 
 
-
-
 - **LS/DV update**
   - LS/DV algorithm
   - if entries updated, send the update out
@@ -30,12 +26,8 @@
 
 
 
-
-
 - **LS/DV flood**
   - send all the LS ($C(A,v)$)/DV ($D(A,Y)$) entries out
-
-
 
 
 
