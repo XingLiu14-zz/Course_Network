@@ -46,6 +46,8 @@ void Simulator::init_routing_protocol(eProtocolType type) {
 /*Reads the file and populates the data structures of the Simulator and fills up the event queue */
 void Simulator::init(char *ptype) {
 
+  global_time = 0;
+
   if (!strcmp(ptype, "DV")) {
     // DV
     sim->protocol_type = P_DV;
